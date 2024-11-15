@@ -16,14 +16,17 @@ type ConcurrentWriter struct {
 
 func NewConcurrentWriter(w *bufio.Writer) *ConcurrentWriter {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &ConcurrentWriter{
+	cw := &ConcurrentWriter{
 		w:      w,
 		jobs:   make(chan []byte, 1000),
 		done:   make(chan struct{}),
 		ctx:    ctx,
 		cancel: cancel,
 	}
+	cw.consume()
+	return cw
 }
+
 func (w ConcurrentWriter) Write(msg []byte) (n int, err error) {
 	if IsCtxDone(w.ctx) {
 		return 0, nil
@@ -33,12 +36,32 @@ func (w ConcurrentWriter) Write(msg []byte) (n int, err error) {
 	w.jobs <- bts
 	return len(msg), nil
 }
-func (w ConcurrentWriter) Consume() {
+func (w ConcurrentWriter) Close(ctx context.Context) error {
+	w.cancel()
+	close(w.jobs)
+loop:
+	for {
+		select {
+		case <-ctx.Done():
+			break loop
+		case <-w.done:
+			break loop
+		default:
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
+	return w.w.Flush()
+}
+func (w ConcurrentWriter) Sync() error {
+	return w.w.Flush()
+}
+
+func (w ConcurrentWriter) consume() {
 	go func() {
 		for {
 			time.Sleep(time.Second)
 			_ = w.w.Flush()
-			if _, more := <-w.jobs; !more {
+			if IsCtxDone(w.ctx) {
 				return
 			}
 		}
@@ -55,25 +78,4 @@ func (w ConcurrentWriter) Consume() {
 		}
 		<-w.done
 	}()
-}
-func (w ConcurrentWriter) Close() error {
-	w.cancel()
-	close(w.jobs)
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
-	defer cancel()
-loop:
-	for {
-		select {
-		case <-ctx.Done():
-			break loop
-		case <-w.done:
-			break loop
-		default:
-			time.Sleep(time.Millisecond * 100)
-		}
-	}
-	return w.w.Flush()
-}
-func (w ConcurrentWriter) Sync() error {
-	return w.w.Flush()
 }
