@@ -13,6 +13,7 @@ type RespJsonExtra struct {
 
 // 通用返回json
 // 所有的接口均返回此对象
+
 type RetJSON struct {
 	Code  Code           `json:"code" example:"0"`
 	Data  any            `json:"data,omitempty"`

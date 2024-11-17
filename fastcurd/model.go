@@ -14,10 +14,21 @@ import (
 var (
 	errCreateFailed = errors.New("create failed")
 )
+var (
+	defaultFilterKeyMapDbField = map[string]string{
+		PrimaryField:    PrimaryField,
+		CreateTimeField: CreateTimeField,
+		UpdateTimeField: UpdateTimeField,
+	}
+	defaultOrderKeyMapDbField = map[string]string{
+		PrimaryField:    PrimaryField,
+		CreateTimeField: CreateTimeField,
+		UpdateTimeField: UpdateTimeField,
+	}
+)
 
 type (
-	BaseModel[P any] interface {
-		constraints.Ptr[P]
+	BaseModelBase[M any] interface {
 		schema.Tabler
 		GetDB() *gorm.DB
 		GetCtx() context.Context
@@ -25,9 +36,13 @@ type (
 		GetFilterKeyMapDBField() map[string]string
 		GetOrderKeyMapDBField() map[string]string
 	}
+	BaseModel[P any] interface {
+		constraints.Ptr[P]
+		BaseModelBase[*P]
+	}
 	Base struct {
 		ID                 uint64          `json:"id" redis:"id" gorm:"type:bigint unsigned auto_increment;primaryKey;"`
-		Ctime              *time.Time      `json:"ctime,omitempty" gorm:"type:datetime;default:CURRENT_TIMESTAMP;not null"`
+		Ctime              *time.Time      `json:"ctime,omitempty" gorm:"type:datetime;default:CURRENT_TIMESTAMP;not null;"`
 		Utime              *time.Time      `json:"utime,omitempty" gorm:"type:datetime ON UPDATE CURRENT_TIMESTAMP;default:CURRENT_TIMESTAMP;not null;"`
 		RelationAffectRows int             `json:"-" gorm:"-"` // 更新时用来保存其他关联数据的更新数
 		Ctx                context.Context `json:"-" gorm:"-"` // ctx
@@ -38,9 +53,33 @@ type (
 func (m *Base) GetDB() *gorm.DB {
 	return m.DB
 }
-
 func (m *Base) GetCtx() context.Context {
 	return m.Ctx
+}
+func (m *Base) GetFilterKeyMapDBField() map[string]string {
+	return defaultFilterKeyMapDbField
+}
+func (m *Base) GetOrderKeyMapDBField() map[string]string {
+	return defaultOrderKeyMapDbField
+}
+func (m *Base) GetFmtDetail(scenes ...string) any {
+	var scene string
+	if len(scenes) == 1 {
+		scene = scenes[0]
+	}
+	var model any
+	switch scene {
+	default:
+		model = NewDefaultSceneBase(m)
+	}
+	return model
+}
+func NewDefaultSceneBase(m *Base) map[string]any {
+	return map[string]any{
+		"id":    m.ID,
+		"ctime": m.Ctime,
+		"utime": m.Utime,
+	}
 }
 
 func GetGormQuery[P BaseModel[M], M any](m P) *gorm.DB {
@@ -148,7 +187,7 @@ func CreateList[P BaseModel[M], M any](m P, list []P) ([]P, error) {
 func TxCreateList[P BaseModel[M], M any](m P, tx *gorm.DB, list []P) ([]P, error) {
 	return dbCreateList(GetTxGormQuery(m, tx), list)
 }
-func ListRecord[P BaseModel[M], M any](m P, page int, limit int, filter Filter, order map[string]string) ([]P, int64, error) {
+func ListRecord[P BaseModel[M], M any](m P, page, limit int, filter Filter, order map[string]string) ([]P, int64, error) {
 	var count int64
 	offset := 0
 	if page > 1 {

@@ -8,7 +8,7 @@ import (
 )
 
 func DevAccess(c *gin.Context) {
-	ip := net.ParseIP(c.ClientIP()).To4()
+	ip := net.ParseIP(c.ClientIP())
 	if !ip.IsPrivate() && !ip.IsLoopback() {
 		c.AbortWithStatus(http.StatusNotFound)
 		return

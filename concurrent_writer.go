@@ -36,6 +36,31 @@ func (w ConcurrentWriter) Write(msg []byte) (n int, err error) {
 	w.jobs <- bts
 	return len(msg), nil
 }
+
+func (w ConcurrentWriter) Sync() error {
+	return nil
+}
+
+func (w ConcurrentWriter) consume() {
+	go func() {
+		flushTicker := time.NewTicker(time.Second)
+		for msg := range w.jobs {
+			_, _ = w.w.Write(msg)
+			if len(w.jobs) == 0 {
+				_ = w.w.Flush()
+				continue
+			}
+			select {
+			case <-flushTicker.C:
+				_ = w.w.Flush()
+			default:
+			}
+		}
+		w.done <- struct{}{}
+		flushTicker.Stop()
+	}()
+}
+
 func (w ConcurrentWriter) Close(ctx context.Context) error {
 	w.cancel()
 	close(w.jobs)
@@ -47,35 +72,8 @@ loop:
 		case <-w.done:
 			break loop
 		default:
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 5)
 		}
 	}
 	return w.w.Flush()
-}
-func (w ConcurrentWriter) Sync() error {
-	return w.w.Flush()
-}
-
-func (w ConcurrentWriter) consume() {
-	go func() {
-		for {
-			time.Sleep(time.Second)
-			_ = w.w.Flush()
-			if IsCtxDone(w.ctx) {
-				return
-			}
-		}
-	}()
-	go func() {
-		for msg := range w.jobs {
-			for i := 0; i < 10; i++ {
-				n, _ := w.w.Write(msg)
-				if n == len(msg) {
-					break
-				}
-				msg = msg[n:]
-			}
-		}
-		<-w.done
-	}()
 }

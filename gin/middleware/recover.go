@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewErrHandler(logFn func(msg string, keysAndVals ...any)) func(c *gin.Context) {
+func RecoveryWithLogFn(logFn func(msg string, keysAndVals ...any)) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		defer func() {
 			err := recover()
@@ -18,7 +18,8 @@ func NewErrHandler(logFn func(msg string, keysAndVals ...any)) func(c *gin.Conte
 			app := ginApp.GetApp(c)
 			reqID := app.GetReqID()
 			var actErr error
-			logFn("app recover", zap.Any("recoverErr", err), zap.String("reqID", reqID), zap.StackSkip("errStack", 2))
+			logFn("bdk.gin.recover", zap.Any("recoverErr", err), zap.String("reqID", reqID),
+				zap.StackSkip("errStack", 2))
 			switch err := err.(type) {
 			case error:
 				actErr = err
