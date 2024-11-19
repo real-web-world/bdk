@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/real-web-world/bdk/constraints"
+	"github.com/real-web-world/bdk/json"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
@@ -74,6 +75,13 @@ func (m *Base) GetFmtDetail(scenes ...string) any {
 	}
 	return model
 }
+func (m *Base) MarshalBinary() (data []byte, err error) {
+	return json.Marshal(m)
+}
+func (m *Base) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, m)
+}
+
 func NewDefaultSceneBase(m *Base) map[string]any {
 	return map[string]any{
 		"id":    m.ID,
