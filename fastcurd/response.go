@@ -5,7 +5,7 @@ import (
 )
 
 type RespJsonExtra struct {
-	ReqID    string             `json:"ReqID"`
+	ReqID    string             `json:"reqID"`
 	SQLs     []logger.SqlRecord `json:"sqls,omitempty"`
 	ProcTime string             `json:"procTime" example:"0.2s"`
 	TempData any                `json:"tempData,omitempty"`
