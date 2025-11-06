@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"runtime"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -132,30 +135,30 @@ func (l *logger) Trace(ctx context.Context, begin time.Time, fc func() (string, 
 	}
 	elapsed := time.Since(begin)
 	level := "info"
-	source := utils.FileWithLineNum()
+	source := FileWithLineNum()
 	sql, rows := fc()
 	switch {
 	case err != nil && l.LogLevel >= gormLogger.Error && (!errors.Is(err, gormLogger.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError):
 		sql, rows := fc()
 		if rows == -1 {
-			l.Printf(l.traceErrStr, utils.FileWithLineNum(), err, float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			l.Printf(l.traceErrStr, source, err, float64(elapsed.Nanoseconds())/1e6, "-", sql)
 		} else {
-			l.Printf(l.traceErrStr, utils.FileWithLineNum(), err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			l.Printf(l.traceErrStr, source, err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
 	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= gormLogger.Warn:
 		sql, rows := fc()
 		slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
 		if rows == -1 {
-			l.Printf(l.traceWarnStr, utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			l.Printf(l.traceWarnStr, source, slowLog, float64(elapsed.Nanoseconds())/1e6, "-", sql)
 		} else {
-			l.Printf(l.traceWarnStr, utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			l.Printf(l.traceWarnStr, source, slowLog, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
 	case l.LogLevel == gormLogger.Info:
 		sql, rows := fc()
 		if rows == -1 {
-			l.Printf(l.traceStr, utils.FileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			l.Printf(l.traceStr, source, float64(elapsed.Nanoseconds())/1e6, "-", sql)
 		} else {
-			l.Printf(l.traceStr, utils.FileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			l.Printf(l.traceStr, source, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
 	}
 	if ctx == nil {
@@ -175,4 +178,28 @@ func (l *logger) Trace(ctx context.Context, begin time.Time, fc func() (string, 
 
 func SetRecordSqlFn(ctx context.Context, fn func(record SqlRecord)) context.Context {
 	return context.WithValue(ctx, KeyRecordSqlFn, fn)
+}
+
+func CallerFrame(skip int) runtime.Frame {
+	pcs := [13]uintptr{}
+	length := runtime.Callers(skip, pcs[:])
+	frames := runtime.CallersFrames(pcs[:length])
+	for i := 0; i < length; i++ {
+		frame, _ := frames.Next()
+		if !strings.Contains(frame.File, "gorm.io/gorm@") && !strings.HasSuffix(frame.File, "_test.go") && !strings.HasSuffix(frame.File, ".gen.go") {
+			frame, _ = frames.Next()
+			return frame
+		}
+	}
+
+	return runtime.Frame{}
+}
+
+// FileWithLineNum return the file name and line number of the current file
+func FileWithLineNum() string {
+	frame := CallerFrame(4)
+	if frame.PC != 0 {
+		return string(strconv.AppendInt(append([]byte(frame.File), ':'), int64(frame.Line), 10))
+	}
+	return ""
 }
