@@ -5,11 +5,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/real-web-world/bdk/constraints"
-	"github.com/real-web-world/bdk/json"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
+
+	"github.com/real-web-world/bdk/constraints"
+	"github.com/real-web-world/bdk/json"
 )
 
 var (
@@ -42,9 +43,9 @@ type (
 		BaseModelBase[*P]
 	}
 	Base struct {
-		ID                 uint64          `json:"id" redis:"id" gorm:"type:bigint unsigned auto_increment;primaryKey;"`
-		Ctime              *time.Time      `json:"ctime,omitempty" gorm:"type:datetime;default:CURRENT_TIMESTAMP;not null;"`
-		Utime              *time.Time      `json:"utime,omitempty" gorm:"type:datetime ON UPDATE CURRENT_TIMESTAMP;default:CURRENT_TIMESTAMP;not null;"`
+		ID                 int64           `json:"id" redis:"id" gorm:"type:bitint unsigned auto_increment;primaryKey;"`
+		Ctime              *time.Time      `json:"ctime,omitempty" gorm:"type:timestamptz;default:current_timestamp;not null;"`
+		Utime              *time.Time      `json:"utime,omitempty" gorm:"type:timestamptz;default:current_timestamp;not null;"`
 		RelationAffectRows int             `json:"-" gorm:"-"` // 更新时用来保存其他关联数据的更新数
 		Ctx                context.Context `json:"-" gorm:"-"` // ctx
 		DB                 *gorm.DB        `json:"-" gorm:"-"` // db
@@ -117,7 +118,7 @@ func GetFmtList[P BaseModel[M], M any](arr []P, sceneParam ...string) any {
 	}
 	return fmtList
 }
-func GetDetailByID[P BaseModel[M], M any](m P, id uint64) (P, error) {
+func GetDetailByID[P BaseModel[M], M any](m P, id int64) (P, error) {
 	record := new(M)
 	err := GetGormQuery(m).Where("id = ?", id).First(record).Error
 	if err != nil {
@@ -125,7 +126,7 @@ func GetDetailByID[P BaseModel[M], M any](m P, id uint64) (P, error) {
 	}
 	return record, err
 }
-func ListByIDArr[P BaseModel[M], M any](m P, idArr []uint64) ([]P, error) {
+func ListByIDArr[P BaseModel[M], M any](m P, idArr []int64) ([]P, error) {
 	if len(idArr) == 0 {
 		return nil, nil
 	}
@@ -133,37 +134,37 @@ func ListByIDArr[P BaseModel[M], M any](m P, idArr []uint64) ([]P, error) {
 	err := GetGormQuery(m).Where("id in ?", idArr).Find(&list).Error
 	return list, err
 }
-func dbEditByID(db *gorm.DB, id uint64, values map[string]any) (int64, error) {
+func dbEditByID(db *gorm.DB, id int64, values map[string]any) (int64, error) {
 	res := db.Where("id = ?", id).Updates(values)
 	return res.RowsAffected, res.Error
 }
-func EditByID[P BaseModel[M], M any](m P, id uint64, values map[string]any) (int64, error) {
+func EditByID[P BaseModel[M], M any](m P, id int64, values map[string]any) (int64, error) {
 	return dbEditByID(GetGormQuery(m), id, values)
 }
-func TxEditByID[P BaseModel[M], M any](m P, tx *gorm.DB, id uint64, values map[string]any) (int64, error) {
+func TxEditByID[P BaseModel[M], M any](m P, tx *gorm.DB, id int64, values map[string]any) (int64, error) {
 	return dbEditByID(GetTxGormQuery(m, tx), id, values)
 }
-func dbEditByIDArr(db *gorm.DB, idArr []uint64, values map[string]any) (int64, error) {
+func dbEditByIDArr(db *gorm.DB, idArr []int64, values map[string]any) (int64, error) {
 	res := db.Where("id in ?", idArr).Updates(values)
 	return res.RowsAffected, res.Error
 }
-func EditByIDArr[P BaseModel[M], M any](m P, idArr []uint64, values map[string]any) (int64, error) {
+func EditByIDArr[P BaseModel[M], M any](m P, idArr []int64, values map[string]any) (int64, error) {
 	return dbEditByIDArr(GetGormQuery(m), idArr, values)
 }
-func TxEditByIDArr[P BaseModel[M], M any](m P, tx *gorm.DB, idArr []uint64, values map[string]any) (int64, error) {
+func TxEditByIDArr[P BaseModel[M], M any](m P, tx *gorm.DB, idArr []int64, values map[string]any) (int64, error) {
 	return dbEditByIDArr(GetTxGormQuery(m, tx), idArr, values)
 }
-func dbDelByIDArr[P BaseModel[M], M any](m P, db *gorm.DB, idArr []uint64) (int64, error) {
+func dbDelByIDArr[P BaseModel[M], M any](m P, db *gorm.DB, idArr []int64) (int64, error) {
 	if len(idArr) == 0 {
 		return 0, nil
 	}
 	res := db.Where("id in ?", idArr).Delete(m)
 	return res.RowsAffected, res.Error
 }
-func DelByIDArr[P BaseModel[M], M any](m P, idArr []uint64) (int64, error) {
+func DelByIDArr[P BaseModel[M], M any](m P, idArr []int64) (int64, error) {
 	return dbDelByIDArr(m, GetGormQuery(m), idArr)
 }
-func TxDelByIDArr[P BaseModel[M], M any](m P, tx *gorm.DB, idArr []uint64) (int64, error) {
+func TxDelByIDArr[P BaseModel[M], M any](m P, tx *gorm.DB, idArr []int64) (int64, error) {
 	return dbDelByIDArr(m, GetTxGormQuery(m, tx), idArr)
 }
 func dbCreateRecord[P BaseModel[M], M any](m P, db *gorm.DB, record *P) (*P, error) {

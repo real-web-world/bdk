@@ -33,8 +33,8 @@ var (
 
 type (
 	ServerInfoData struct {
-		Timestamp   int64
-		TimestampMs int64
+		Timestamp   int64 `json:"ts"`
+		TimestampMs int64 `json:"tms"`
 	}
 	VersionInfo struct {
 		Version   string `json:"version" example:"1.0.0"`
@@ -61,10 +61,11 @@ type (
 )
 
 func IsSkipLogReq(req *http.Request, statusCode int) bool {
-	isDevApi := strings.Index(req.RequestURI, DebugApiPrefix) == 0 ||
-		strings.Index(req.RequestURI, SwaggerApiPrefix) == 0
+	reqPath := req.URL.Path
+	isDevApi := strings.Index(reqPath, DebugApiPrefix) == 0 ||
+		strings.Index(reqPath, SwaggerApiPrefix) == 0
 	return isDevApi || statusCode == http.StatusNotFound || req.Method == http.MethodOptions ||
-		slices.Index(skipLogPathArr, req.RequestURI) >= 0
+		slices.Index(skipLogPathArr, reqPath) >= 0
 }
 
 func GetUserAgent(r *http.Request) string {
