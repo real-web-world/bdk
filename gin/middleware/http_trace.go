@@ -6,10 +6,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
 	"github.com/real-web-world/bdk"
 	"github.com/real-web-world/bdk/fastcurd"
 	ginApp "github.com/real-web-world/bdk/gin"
-	"go.uber.org/zap"
 )
 
 const (
@@ -25,6 +26,9 @@ const (
 	shouldTraceNone  = 0
 	shouldTraceTrue  = 1
 	shouldTraceFalse = 2
+)
+const (
+	KeyResp = "resp"
 )
 
 func NewHttpTrace(logFn func(msg string, keysAndVals ...any)) func(c *gin.Context) {
@@ -57,7 +61,7 @@ func NewHttpTraceWithDefaultTraceParam(logFn func(msg string, keysAndVals ...any
 		}
 		procTime := app.GetProcTime()
 		if isShouldSaveResp(c) {
-			resp = app.GetCtxRespVal()
+			resp = GetCtxRespVal(c)
 		}
 		if len(postData) > MaxTraceSize {
 			postData = postData[:MaxTraceSize]
@@ -68,7 +72,7 @@ func NewHttpTraceWithDefaultTraceParam(logFn func(msg string, keysAndVals ...any
 			zap.Int("bdk.http.statusCode", statusCode),
 			zap.String("bdk.gin.reqID", reqID),
 			zap.Duration("bdk.gin.procTime", procTime),
-			zap.Timep("bdk.gin.reqTime", reqTime),
+			zap.Time("bdk.gin.reqTime", reqTime),
 		}
 		if resp != nil {
 			keysAndValues = append(keysAndValues, zap.Any("bdk.http.resp", resp))
@@ -79,7 +83,15 @@ func NewHttpTraceWithDefaultTraceParam(logFn func(msg string, keysAndVals ...any
 		logFn("bdk.httpTrace", keysAndValues...)
 	}
 }
-
+func GetCtxRespVal(c *gin.Context) *fastcurd.RetJSON {
+	if resp, ok := c.Get(KeyResp); ok {
+		return resp.(*fastcurd.RetJSON)
+	}
+	return nil
+}
+func SetCtxRespVal(c *gin.Context, json *fastcurd.RetJSON) {
+	c.Set(KeyResp, json)
+}
 func isShouldSaveResp(c *gin.Context) bool {
 	b, ok := c.Get(KeySaveResp)
 	if !ok {

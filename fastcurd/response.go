@@ -1,25 +1,24 @@
 package fastcurd
 
 import (
-	"github.com/real-web-world/bdk/logger"
+	"time"
 )
 
 type RespJsonExtra struct {
-	ReqID    string             `json:"reqID"`
-	SQLs     []logger.SqlRecord `json:"sqls,omitempty"`
-	ProcTime string             `json:"procTime" example:"0.2s"`
-	TempData any                `json:"tempData,omitempty"`
+	//ReqID    string             `json:"reqID"`
+	ProcTime time.Duration `json:"procTime" example:"0.2s"`
+	//TempData any    `json:"tempData,omitempty"`
 }
 
 // 通用返回json
 // 所有的接口均返回此对象
 
 type RetJSON struct {
-	Code  Code           `json:"code" example:"0"`
-	Data  any            `json:"data,omitempty"`
-	Msg   string         `json:"msg,omitempty" example:"提示信息"`
-	Count *int           `json:"count,omitempty"`
-	Page  int            `json:"page,omitempty"`
-	Limit int            `json:"limit,omitempty"`
-	Extra *RespJsonExtra `json:"extra,omitempty"`
+	Code  Code   `json:"code" example:"0"`
+	Data  any    `json:"data,omitempty"`
+	Msg   string `json:"msg,omitempty" example:"提示信息"`
+	Page  int    `json:"page,omitempty"`
+	Limit int    `json:"limit,omitempty"`
+	Count int64  `json:"count,omitempty"`
+	//Extra RespJsonExtra `json:"extra,omitempty"`
 }
