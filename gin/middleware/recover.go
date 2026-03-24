@@ -4,11 +4,12 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
-	ginApp "github.com/real-web-world/bdk/gin"
 	"go.uber.org/zap"
+
+	ginApp "github.com/real-web-world/bdk/gin"
 )
 
-func RecoveryWithLogFn(logFn func(msg string, keysAndVals ...any)) func(c *gin.Context) {
+func RecoveryWithLogFn(logFn func(msg string, keysAndVals ...zap.Field)) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		defer func() {
 			err := recover()
