@@ -31,13 +31,13 @@ const (
 	KeyResp = "resp"
 )
 
-func NewHttpTrace(logFn func(msg string, keysAndVals ...any)) func(c *gin.Context) {
+func NewHttpTrace(logFn func(msg string, keysAndVals ...zap.Field)) func(c *gin.Context) {
 	return NewHttpTraceWithDefaultTraceParam(logFn, true)
 }
-func NewHttpTraceWithDefaultNotTrace(logFn func(msg string, keysAndVals ...any)) func(c *gin.Context) {
+func NewHttpTraceWithDefaultNotTrace(logFn func(msg string, keysAndVals ...zap.Field)) func(c *gin.Context) {
 	return NewHttpTraceWithDefaultTraceParam(logFn, false)
 }
-func NewHttpTraceWithDefaultTraceParam(logFn func(msg string, keysAndVals ...any), isDefaultTrace bool) func(c *gin.Context) {
+func NewHttpTraceWithDefaultTraceParam(logFn func(msg string, keysAndVals ...zap.Field), isDefaultTrace bool) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		c.Next()
 		statusCode := c.Writer.Status()
@@ -66,7 +66,7 @@ func NewHttpTraceWithDefaultTraceParam(logFn func(msg string, keysAndVals ...any
 		if len(postData) > MaxTraceSize {
 			postData = postData[:MaxTraceSize]
 		}
-		keysAndValues := []any{
+		keysAndValues := []zap.Field{
 			zap.String("bdk.http.url", c.Request.RequestURI),
 			zap.String("bdk.http.clientIP", c.ClientIP()),
 			zap.Int("bdk.http.statusCode", statusCode),

@@ -14,7 +14,7 @@ const (
 
 // req path
 const (
-	FaviconReq       = "/favicon"
+	FaviconReq       = "/favicon.ico"
 	VersionApi       = "/version"
 	MetricsApi       = "/metrics"
 	StatusApi        = "/status"
